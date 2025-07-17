@@ -1,56 +1,59 @@
-RAID-Rechner
-Ein interaktives Tool zur Berechnung von Speicherkapazitäten für verschiedene RAID-Konfigurationen.
-Funktionalität
+RAID Calculator
 
-Festplattenwahl: Auswahl zwischen HDD (20-1 TB) und SATA SSD (16-0.48 TB).
-Festplatten-Slots: Bis zu 12 Festplatten können hinzugefügt werden.
-Hot Spares: Konfigurierbare Anzahl an Ersatzfestplatten.
-RAID-Typen: Unterstützt RAID 0, 1, 5, 6, 10 und JBOD.
-Berechnung: Zeigt nutzbaren Speicher, Paritätsdaten, reservierten und ungenutzten Speicherplatz an.
-Visualisierung: Balkendiagramme für Speicheraufteilung pro RAID-Typ.
-Interaktivität: Tabs für HDD/SSD, Zurücksetzen-Funktion, Dropdown für zusätzliche RAID-Typen.
+An interactive tool for calculating storage capacities for various RAID configurations.
+Functionality
 
-Dateistruktur
+Hard drive selection: Choose between HDD (20-1 TB) and SATA SSD (16-0.48 TB).
+Hard drive slots: Up to 12 hard drives can be added.
+Hot spares: Configurable number of replacement hard drives.
+RAID types: Supports RAID 0, 1, 5, 6, 10, and JBOD.
+Calculation: Displays usable storage, parity data, reserved, and unused storage space.
+Visualization: Bar charts for storage distribution per RAID type.
+Interactivity: Tabs for HDD/SSD, reset function, dropdown for additional RAID types.
 
-index.html: Hauptseite mit HTML, CSS und JavaScript.
-HTML: Struktur für Tabs, Festplatten-Slots, Eingabefelder und Diagramme.
-CSS: Styling für Layout, Tabs, Slots, Balkendiagramme und Buttons.
-JavaScript: Logik für:
-Initialisierung (init()): Event-Listener für Tabs, Buttons, Eingaben.
-Festplattenanzeige (renderSizes(), renderSlots()): Dynamische Buttons und Slots.
-Berechnung (computeData()): Speicheraufteilung für RAID-Typen.
-Ergebnisdarstellung (renderResults(), renderChartRow()): Diagramme und Dropdown.
-Zurücksetzen (clearResults()): Löscht Ergebnisse und setzt Eingaben zurück.
+File structure
 
-
-
+index.html: Main page with HTML, CSS, and JavaScript.
+HTML: Structure for tabs, hard drive slots, input fields, and charts.
+CSS: Styling for layout, tabs, slots, bar charts, and buttons.
+JavaScript: Logic for:
+Initialization (init()): Event listener for tabs, buttons, inputs.
+Hard drive display (renderSizes(), renderSlots()): Dynamic buttons and slots.
+Calculation (computeData()): Storage allocation for RAID types.
+Result display (renderResults(), renderChartRow()): Charts and dropdown.
+Reset (clearResults()): Deletes results and resets inputs.
 
 
-Nutzung
-
-Wählen Sie HDD oder SATA SSD über die Tabs.
-Klicken Sie auf Festplattengrößen, um Slots zu füllen (max. 12).
-Geben Sie die Anzahl der Hot Spares ein.
-Klicken Sie auf "Berechnen" für Speicheraufteilung.
-Sehen Sie die besten RAID-Konfigurationen und wählen Sie weitere Typen im Dropdown.
-
-Technische Details
-
-Sprache: HTML, CSS, JavaScript.
-Einheiten: Kapazitäten in TB, binäre Darstellung von 1 GB.
-RAID-Berechnungen:
-RAID 0: Volle Kapazität, kein Schutz.
-RAID 1: Kleinste Festplatte als nutzbare Kapazität.
-RAID 5: Kapazität minus eine Festplatte (Parität).
-RAID 6: Kapazität minus zwei Festplatten (Parität).
-RAID 10: Hälfte der Festplatten × kleinste Festplatte.
-JBOD: Summierte Kapazität ohne Redundanz.
 
 
-Reservierter Speicher: 1 % der Rohkapazität.
 
-Hinweise
 
-Ergebnisse basieren auf einer binären Darstellung von 1 GB.
-Farbcodierung: Orange (reserviert), Grün (nutzbar), Blau (Parität), Grau (ungenutzt).
-Responsive Design für verschiedene Bildschirmgrößen.
+
+Usage
+
+Select HDD or SATA SSD using the tabs.
+Click on hard drive sizes to fill slots (max. 12).
+Enter the number of hot spares.
+Click on "Calculate" for storage allocation.
+See the best RAID configurations and select additional types from the dropdown menu.
+
+Technical details
+
+Language: HTML, CSS, JavaScript.
+Units: Capacities in TB, binary representation of 1 GB.
+RAID calculations:
+RAID 0: Full capacity, no protection.
+RAID 1: Smallest hard drive as usable capacity.
+RAID 5: Capacity minus one hard drive (parity).
+RAID 6: Capacity minus two hard drives (parity).
+RAID 10: Half of the hard drives × smallest hard drive.
+JBOD: Total capacity without redundancy.
+
+
+Reserved storage: 1% of raw capacity.
+
+Notes
+
+Results are based on a binary representation of 1 GB.
+Color coding: Orange (reserved), green (usable), blue (parity), gray (unused).
+Responsive design for different screen sizes.
