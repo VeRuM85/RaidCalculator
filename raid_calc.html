@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAID Rechner</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; }
+        .tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 15px; }
+        .tab { padding: 10px 20px; cursor: pointer; color: #555; }
+        .tab.active { color: #007bff; border-bottom: 3px solid #007bff; }
+        .sizes { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .size-btn { padding: 10px 15px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; min-width: 80px; text-align: center; }
+        .size-btn:hover { background: #ddd; }
+        .slots { background: #2b2e3c; padding: 20px; border-radius: 6px; display: flex; gap: 10px; overflow-x: auto; min-height: 100px; margin-bottom: 10px; }
+        .slot { flex: 0 0 60px; height: 80px; border: 2px dashed #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 0.9em; position: relative; }
+        .slot.filled { border-style: solid; color: #fff; background: #007bff; }
+        .controls { display: flex; align-items: center; gap: 15px; justify-content: space-between; margin-bottom: 30px; }
+        .controls label { font-weight: bold; }
+        button, select, input[type=number] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: #fff; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .reset { background: transparent; color: #007bff; border: none; text-decoration: underline; padding: 0; }
+        .section { margin-top: 40px; }
+        .label { font-weight: bold; margin-bottom: 10px; display: block; text-align: center; }
+        .chart-row { display: flex; align-items: center; margin-bottom: 15px; }
+        .chart-row label { width: 180px; font-weight: bold; }
+        .bar { display: flex; height: 30px; border-radius: 4px; overflow: hidden; flex: 1; }
+        .segment { display: flex; align-items: center; justify-content: center; font-size: 0.8em; color: #fff; white-space: nowrap; }
+        .reserved { background: #fb8d00; }
+        .usable { background: #00b37e; }
+        .parity { background: #0087ff; }
+        .unused { background: #a0a0a0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>RAID-Rechner</h1>
+    <!-- Schritt 1: Auswahl -->
+    <div class="tabs">
+        <div class="tab active" data-type="hdd">HDD</div>
+        <div class="tab" data-type="ssd">SATA SSD</div>
+    </div>
+    <div id="sizes-container" class="sizes"></div>
+    <div class="slots" id="slots-container"></div>
+    <div>Anzahl der Festplatten: <span id="disk-count">0</span></div>
+    <div class="controls">
+        <div>
+            <label for="hotspare-count">Hot Spares:</label>
+            <input type="number" id="hotspare-count" min="0" value="0" style="width:60px;">  
+            <button id="reset">Zurücksetzen</button>
+        </div>
+        <button id="calculate">Berechnen</button>
+    </div>
+
+    <!-- Schritt 2: Geschätzter Bedarf -->
+    <div class="section">
+        <h2>Schritt 2: Geschätzter Bedarf</h2>
+        <div id="suggestions-container"></div>
+        <div id="other-select-container" style="display:none;">
+            <div class="label">Weitere RAID-Typen:</div>
+            <select id="otherRaidSelect"><option value="">– auswählen –</option></select>
+        </div>
+        <div id="other-chart"></div>
+        <div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;font-size:0.9em;margin-top:20px;">
+            <div style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:#fb8d00;display:inline-block;"></span>Für das System reservierter Speicherplatz¹</div>
+            <div style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:#00b37e;display:inline-block;"></span>Nutzbarer Speicherplatz²</div>
+            <div style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:#0087ff;display:inline-block;"></span>Für Datenschutz</div>
+            <div style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:#a0a0a0;display:inline-block;"></span>Ungenutzter Speicherplatz</div>
+        </div>
+        <p style="text-align:center;font-size:0.8em;color:#555;margin-top:8px;">Ergebnisse des RAID-Rechners basieren auf einer binären Darstellung von 1 GB.</p>
+    </div>
+</div>
+<script>
+    const hddSizes=[20,18,16,14,12,10,8,6,4,3,2,1];
+    // Angepasste SSD-Größen
+    const ssdSizes=[16,8,7,4,2,1,0.96,0.5,0.48];
+    const maxSlots=12;
+    const raidTypes=[
+        {key:'raid0', label:'RAID 0', min:1},
+        {key:'raid1', label:'RAID 1', min:2},
+        {key:'raid5', label:'RAID 5', min:3},
+        {key:'raid6', label:'RAID 6', min:4},
+        {key:'raid10', label:'RAID 10', min:4}
+    ];
+    let currentTab='hdd', disks=[], spareCount=0;
+
+    // DOM-Elemente
+    const tabs=document.querySelectorAll('.tab');
+    const sizesContainer=document.getElementById('sizes-container');
+    const slotsContainer=document.getElementById('slots-container');
+    const diskCountLabel=document.getElementById('disk-count');
+    const resetBtn=document.getElementById('reset');
+    const calculateBtn=document.getElementById('calculate');
+    const spareInput=document.getElementById('hotspare-count');
+    const suggestionsContainer=document.getElementById('suggestions-container');
+    const otherSelectContainer=document.getElementById('other-select-container');
+    const otherRaidSelect=document.getElementById('otherRaidSelect');
+    const otherChart=document.getElementById('other-chart');
+
+    function init(){
+        tabs.forEach(tab=>tab.addEventListener('click',()=>{
+            tabs.forEach(t=>t.classList.remove('active'));
+            tab.classList.add('active'); currentTab=tab.dataset.type;
+            disks=[]; renderSlots(); renderSizes(); clearResults();
+        }));
+        resetBtn.addEventListener('click',()=>{disks=[]; spareInput.value=0; spareCount=0; renderSlots(); clearResults();});
+        spareInput.addEventListener('change',()=>{ spareCount=parseInt(spareInput.value)||0; renderResults(); });
+        calculateBtn.addEventListener('click',renderResults);
+                calculateBtn.addEventListener('click',renderResults);
+        // Dropdown: Für ausgewählten RAID-Typ im eigenen Chart-Bereich anzeigen
+        otherRaidSelect.addEventListener('change', ()=>{
+            // Vorherigen Chart löschen
+            otherChart.innerHTML = '';
+            const key = otherRaidSelect.value;
+            if(!key) return;
+            const cfg = computeData().find(r=>r.key===key);
+            if(!cfg) return;
+            renderChartRow(otherChart, cfg);
+        });
+        renderSizes(); renderSlots(); renderSlots();
+    }
+
+    function renderSizes(){
+        sizesContainer.innerHTML='';
+        const list=currentTab==='hdd'?hddSizes:ssdSizes;
+        list.forEach(size=>{
+            const btn=document.createElement('div'); btn.className='size-btn';
+            // Einheit immer TB
+            btn.textContent=size + ' TB';
+            btn.addEventListener('click',()=>{
+                if(disks.length<maxSlots) disks.push(size);
+                renderSlots();
+            });
+            sizesContainer.appendChild(btn);
+        });
+    }
+
+    function renderSlots(){
+        slotsContainer.innerHTML='';
+        disks.forEach(size=>{
+            const slot=document.createElement('div'); slot.className='slot filled';
+            // Einheit immer TB
+            slot.textContent=size + ' TB';
+            slotsContainer.appendChild(slot);
+        });
+        for(let i=disks.length;i<maxSlots;i++) slotsContainer.appendChild(Object.assign(document.createElement('div'),{className:'slot'}));
+        diskCountLabel.textContent=disks.length;
+    }
+
+    function clearResults(){
+        suggestionsContainer.innerHTML='';
+        otherRaidSelect.innerHTML='<option value="">– auswählen –</option>';
+        otherSelectContainer.style.display='none';
+        otherChart.innerHTML='';
+    }
+
+    function computeData(){
+        const active=disks.slice(0, disks.length-spareCount);
+        const spare=spareCount;
+        const raw=active.reduce((a,b)=>a+b,0);
+        const smallest=Math.min(...active);
+        const reserved=Number((raw*0.01).toFixed(2));
+        return raidTypes.filter(r=>active.length>=r.min).map(r=>{
+            let baseUsable=0;
+            switch(r.key){
+                case 'raid0': baseUsable=raw; break;
+                case 'raid1': baseUsable=smallest; break;
+                case 'raid5': baseUsable=raw-smallest; break;
+                case 'raid6': baseUsable=raw-2*smallest; break;
+                case 'raid10': baseUsable=Math.floor(active.length/2)*smallest; break;
+            }
+            const paritySpace=Number((raw-baseUsable).toFixed(2));
+            const usable=baseUsable;
+            const parity=Number((paritySpace-reserved>0?paritySpace-reserved:paritySpace).toFixed(2));
+            const unused=Number((raw-reserved-usable-parity).toFixed(2));
+            return {...r, raw, reserved, usable, parity, unused, spare};
+        });
+    }
+
+    function renderResults(){
+        clearResults();
+        const data=computeData();
+        if(!data.length) return;
+        const sorted=[...data].sort((a,b)=>b.usable-a.usable);
+        const suggestions=sorted.slice(0,2);
+        const others=sorted.slice(2);
+        suggestions.forEach(cfg=>renderChartRow(suggestionsContainer,cfg));
+        if(others.length){
+            others.forEach(cfg=>{
+                const opt=document.createElement('option'); opt.value=cfg.key; opt.textContent=cfg.label;
+                otherRaidSelect.appendChild(opt);
+            });
+            const jbodOpt=document.createElement('option'); jbodOpt.value='jbod'; jbodOpt.textContent='JBOD';
+            otherRaidSelect.appendChild(jbodOpt);
+            otherSelectContainer.style.display='block';
+        }
+    }
+
+    function renderChartRow(parent,cfg){
+        const row=document.createElement('div'); row.className='chart-row';
+        const label=document.createElement('label'); label.textContent=cfg.label + (cfg.spare>0?` (+${cfg.spare} Hot Spare)`:'');
+        const bar=document.createElement('div'); bar.className='bar';
+        [[cfg.reserved,'reserved'],[cfg.usable,'usable'],[cfg.parity,'parity'],[cfg.unused,'unused']].forEach(([val,cls])=>{
+            if(val<=0) return;
+            const seg=document.createElement('div'); seg.className='segment '+cls; seg.style.flex=val;
+            seg.textContent=val + ' TB';
+            bar.appendChild(seg);
+        });
+        row.appendChild(label); row.appendChild(bar); parent.appendChild(row);
+    }
+
+    init();
+</script>
+</body>
+</html>
